@@ -1,17 +1,19 @@
 # ==============================================================================
-# EtudePlus - Dockerfile for Render (Dynamic Deployment)
+# EtudePlus - Dockerfile for Render (Free Tier Deployment)
 # Builds React frontend and serves it through FastAPI backend
+# Optimized for Render's free tier (512MB RAM, 0.1 CPU)
 # ==============================================================================
 
 # Stage 1: Build Frontend
 FROM node:20-slim AS frontend-builder
 
-WORKDIR /app/frontend
+WORKDIR /app
 
-# Copy frontend package files
+# Copy package files first (better caching)
 COPY package*.json ./
 
-# Install dependencies
+# Install dependencies with memory optimization for free tier
+ENV NODE_OPTIONS="--max-old-space-size=2048"
 RUN npm ci --legacy-peer-deps
 
 # Copy frontend source
@@ -28,52 +30,65 @@ ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_KEYCLOAK_URL=$VITE_KEYCLOAK_URL
 ENV VITE_KEYCLOAK_REALM=$VITE_KEYCLOAK_REALM
 ENV VITE_KEYCLOAK_CLIENT_ID=$VITE_KEYCLOAK_CLIENT_ID
-ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 # Build the frontend
 RUN npm run build
 
-# Stage 2: Backend with Frontend
+# Stage 2: Backend with Frontend (Production)
 FROM python:3.11-slim AS backend
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+# Install system dependencies (minimal for free tier)
+RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 # Copy backend requirements first for better caching
 COPY backend/requirements.txt ./requirements.txt
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy backend application code
-COPY backend/ ./backend/
-COPY backend/alembic/ ./alembic/
+COPY backend/app ./app
+COPY backend/alembic ./alembic
 COPY backend/alembic.ini ./alembic.ini
 
 # Copy built frontend from previous stage
 COPY --from=frontend-builder /app/dist ./static
+
+# Create startup script
+RUN echo '#!/bin/bash\n\
+set -e\n\
+echo "Running database migrations..."\n\
+alembic upgrade head\n\
+echo "Starting server..."\n\
+exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}\n\
+' > /app/start.sh && chmod +x /app/start.sh
 
 # Create a non-root user for security
 RUN useradd --create-home --shell /bin/bash appuser && \
     chown -R appuser:appuser /app
 USER appuser
 
-# Set Python path
-ENV PYTHONPATH=/app/backend
-ENV PYTHONUNBUFFERED=1
+# Environment variables
+ENV PYTHONPATH=/app \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PORT=8000 \
+    SERVE_FRONTEND=true
 
 # Expose port
-EXPOSE 8000
+EXPOSE ${PORT}
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:8000/health/ || exit 1
+    CMD curl -f http://localhost:${PORT}/health/ || exit 1
 
-# Start command
-CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Start command - run migrations then start server
+CMD ["/app/start.sh"]

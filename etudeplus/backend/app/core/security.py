@@ -180,6 +180,13 @@ ROLE_PERMISSIONS: dict = {
     "ALUMNI": ["me:read"],
     "STAFF": ["students:read", "attendance:read"],
     "ACCOUNTANT": ["finance:read", "finance:write", "students:read"],
+    "GROUP_AGENT": [
+        "support:read", "support:write", "support:delete",
+        "tickets:read", "tickets:write", "tickets:assign",
+        "maintenance:read", "maintenance:write",
+        "users:read", "tenants:read",
+        "logs:read", "analytics:read",
+    ],
 }
 
 

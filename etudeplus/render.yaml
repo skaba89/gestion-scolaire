@@ -1,6 +1,6 @@
 # ==============================================================================
-# EtudePlus - Render Blueprint (Dynamic Deployment)
-# A single web service serving both backend API and React frontend
+# EtudePlus - Render Blueprint (Free Tier)
+# School Management System - Full Stack Deployment
 # ==============================================================================
 
 services:
@@ -8,36 +8,36 @@ services:
   - type: web
     name: etudeplus
     env: docker
-    region: frankfurt  # or oregon for US
-    plan: free  # Free tier: 512MB RAM, 0.1 CPU, spins down after inactivity
+    region: oregon
+    plan: free
     dockerfilePath: ./Dockerfile.render
     dockerContext: .
     
     # Build-time environment variables
     buildEnv:
-      VITE_API_URL: ""  # Will use relative API path (same origin)
-      VITE_KEYCLOAK_URL: ${KEYCLOAK_URL}
+      VITE_API_URL: ""
+      VITE_KEYCLOAK_URL: ""
       VITE_KEYCLOAK_REALM: schoolflow
       VITE_KEYCLOAK_CLIENT_ID: schoolflow-frontend
     
     # Runtime environment variables
     envVars:
-      # Database connection
+      # Database (auto-configured)
       - key: DATABASE_URL
         fromDatabase:
           name: etudeplus-db
           property: connectionString
       
-      # Redis connection
+      # Redis (auto-configured)
       - key: REDIS_URL
         fromService:
           name: etudeplus-redis
           type: redis
           property: connectionString
       
-      # Security
+      # Auto-generated secret
       - key: SECRET_KEY
-        generateValue: true  # Auto-generate a secure secret
+        generateValue: true
       
       # Application settings
       - key: DEBUG
@@ -49,11 +49,11 @@ services:
       - key: SERVE_FRONTEND
         value: "true"
       
-      # CORS - allow same origin
+      # CORS
       - key: BACKEND_CORS_ORIGINS
         value: ""
       
-      # Keycloak configuration (set manually in dashboard)
+      # Keycloak (configure manually after deployment)
       - key: KEYCLOAK_URL
         sync: false
       
@@ -64,12 +64,12 @@ services:
         value: "schoolflow-backend"
       
       - key: KEYCLOAK_CLIENT_SECRET
-        sync: false  # Set manually in Render dashboard
+        sync: false
       
       - key: KEYCLOAK_AUDIENCE
         value: "schoolflow-frontend"
       
-      # MinIO/S3 Storage (optional - can use Render Object Storage)
+      # Storage (optional - configure manually)
       - key: MINIO_ENDPOINT
         sync: false
       
@@ -83,60 +83,60 @@ services:
         value: "schoolflow"
       
       - key: MINIO_SECURE
-        value: "true"
+        value: "false"
+      
+      # Database pool (optimized for free tier)
+      - key: DATABASE_POOL_SIZE
+        value: "5"
+      
+      - key: DATABASE_MAX_OVERFLOW
+        value: "10"
     
-    # Health check for container orchestration
+    # Health check
     healthCheckPath: /health/
     
-    # Number of instances (free tier only allows 1)
+    # Free tier: 1 instance only
     numInstances: 1
     
-    # Auto-deploy on push to main branch
+    # Auto-deploy
     autoDeploy: true
     
     # Branch to deploy
-    branch: main
+    branch: master
 
   # ─── Redis Cache ─────────────────────────────────────────────────────────────
   - type: redis
     name: etudeplus-redis
-    region: frankfurt
-    plan: free  # Free tier: 25MB limit
-    maxmemoryPolicy: allkeys-lru  # Evict any key when memory is full
+    region: oregon
+    plan: free
+    maxmemoryPolicy: allkeys-lru
 
 # ─── PostgreSQL Database ───────────────────────────────────────────────────────
 databases:
   - name: etudeplus-db
     databaseName: schoolflow
-    region: frankfurt
-    plan: free  # Free tier: 1GB storage, expires after 90 days
+    region: oregon
+    plan: free
     user: schoolflow_user
     postgresMajorVersion: 15
 
 # ==============================================================================
-# IMPORTANT NOTES FOR FREE TIER:
+# RENDER DEPLOYMENT INSTRUCTIONS
 # ==============================================================================
-# 
-# 1. Web Service Limitations (Free):
-#    - 512MB RAM, 0.1 CPU
-#    - Spins down after 15 minutes of inactivity
-#    - 750 hours/month (enough for 1 service running 24/7)
-#    - Cold starts can take 30-60 seconds
 #
-# 2. Database Limitations (Free):
-#    - 1GB storage
-#    - Expires after 90 days (you'll need to migrate)
-#    - No automatic backups
-#    - Connection limit: 97 connections
+# 1. Go to https://render.com and sign up with GitHub
+# 2. Click "New +" → "Blueprint"
+# 3. Select this repository: gestion-scolaire
+# 4. Click "Apply" to create all services
+# 5. Wait 5-10 minutes for deployment
 #
-# 3. Redis Limitations (Free):
-#    - 25MB memory
-#    - No persistence
-#    - Connection limit: 30 connections
+# AFTER DEPLOYMENT:
+# - Your app URL: https://etudeplus.onrender.com
+# - API docs: https://etudeplus.onrender.com/docs
 #
-# 4. What You Need to Configure Manually:
-#    - Keycloak (use a managed service like Auth0, or self-host on another platform)
-#    - S3-compatible storage (Render Object Storage, or AWS S3 free tier)
-#    - The KEYCLOAK_URL and KEYCLOAK_CLIENT_SECRET in Render dashboard
+# CONFIGURE THESE IN RENDER DASHBOARD:
+# - KEYCLOAK_URL: Your Keycloak instance URL
+# - KEYCLOAK_CLIENT_SECRET: From Keycloak client credentials
+# - MINIO_*: Your S3-compatible storage credentials
 #
 # ==============================================================================

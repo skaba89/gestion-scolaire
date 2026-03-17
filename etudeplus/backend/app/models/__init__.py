@@ -44,3 +44,6 @@ from app.models.elearning import (
     Course, CourseEnrollment, Lesson, LessonResource, LessonProgress,
     HomeworkAssignment, HomeworkSubmission, CourseDiscussion, DiscussionReply
 )
+
+# Support models
+from app.models.support import SupportTicket, TicketComment, MaintenanceLog
