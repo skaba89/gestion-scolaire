@@ -1,0 +1,132 @@
+# ==============================================================================
+# EtudePlus - Fly.io Configuration (Dynamic Deployment)
+# Fly.io offers free allowance: 3 VMs, 3GB volume, 160GB outbound data
+# ==============================================================================
+
+app = "etudeplus"
+primary_region = "cdg"  # Paris - change to closest region (cdg=Paris, fra=Frankfurt, lhr=London)
+kill_signal = "SIGINT"
+kill_timeout = "10s"
+
+[experimental]
+  auto_rollback = true
+
+[build]
+  dockerfile = "Dockerfile.render"
+
+[deploy]
+  release_command = "alembic upgrade head"
+
+[env]
+  PORT = "8000"
+  DEBUG = "False"
+  LOG_LEVEL = "INFO"
+  PYTHONUNBUFFERED = "1"
+  SERVE_FRONTEND = "true"
+
+# ─── Main Service ──────────────────────────────────────────────────────────────
+[[services]]
+  protocol = "tcp"
+  internal_port = 8000
+  auto_stop_machines = true    # Stop when idle (saves money)
+  auto_start_machines = true   # Start on first request
+  min_machines_running = 0     # Can scale to zero
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+    force_https = true
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+  [services.concurrency]
+    type = "connections"
+    hard_limit = 25
+    soft_limit = 20
+
+  [[services.tcp_checks]]
+    interval = "15s"
+    timeout = "2s"
+    grace_period = "30s"
+    restart_limit = 0
+
+  [[services.http_checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "30s"
+    method = "get"
+    path = "/health/"
+    protocol = "http"
+    tls_skip_verify = false
+
+# ─── VM Configuration ───────────────────────────────────────────────────────────
+# Free tier: shared-cpu-1x (256MB) included
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 512  # Increase for better performance (costs more)
+
+# ─── Metrics ────────────────────────────────────────────────────────────────────
+[[metrics]]
+  port = 8000
+  path = "/metrics/"
+
+# ==============================================================================
+# FLY.IO SETUP INSTRUCTIONS:
+# ==============================================================================
+#
+# 1. Install Fly CLI:
+#    curl -L https://fly.io/install.sh | sh
+#
+# 2. Login to Fly:
+#    fly auth login
+#
+# 3. Create the app (choose a unique name):
+#    fly apps create etudeplus
+#
+# 4. Create PostgreSQL database:
+#    fly postgres create
+#    # Choose development (single node) for free tier
+#    # Attach to your app:
+#    fly postgres attach <db-name>
+#
+# 5. Create Redis (using Upstash or Fly Redis):
+#    # Option A: Upstash (free tier available)
+#    # Create at https://upstash.com, then set REDIS_URL
+#    
+#    # Option B: Fly Redis
+#    fly redis create
+#
+# 6. Set secrets (environment variables):
+#    fly secrets set SECRET_KEY=$(openssl rand -hex 32)
+#    fly secrets set KEYCLOAK_URL=https://your-keycloak.example.com
+#    fly secrets set KEYCLOAK_CLIENT_SECRET=your-client-secret
+#    fly secrets set MINIO_ENDPOINT=your-s3-endpoint
+#    fly secrets set MINIO_ACCESS_KEY=your-access-key
+#    fly secrets set MINIO_SECRET_KEY=your-secret-key
+#
+# 7. Deploy:
+#    fly deploy
+#
+# 8. Open the app:
+#    fly open
+#
+# ==============================================================================
+# FLY.IO FREE TIER LIMITATIONS:
+# ==============================================================================
+#
+# Free Allowance (monthly):
+# - 3 shared-cpu-1x VMs (256MB each)
+# - 3GB persistent volume
+# - 160GB outbound data transfer
+# - Unlimited inbound data
+#
+# Important:
+# - Requires credit card for verification
+# - No cold starts with machines (unlike Render)
+# - Can scale to zero machines when idle
+# - Global edge network
+#
+# ==============================================================================
