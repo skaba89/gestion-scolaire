@@ -549,30 +549,6 @@ def _build_public_response(tenant: Any, db: Session) -> TenantPublicResponse:
     )
 
 
-@router.get("/public/", response_model=List[TenantPublicCard])
-async def list_public_tenants(
-    db: Session = Depends(get_db)
-):
-    """Publicly list all active tenants with basic info for the directory."""
-    tenants = db.query(Tenant).filter(Tenant.is_active == True).order_by(Tenant.name).all()
-    
-    result = []
-    for t in tenants:
-        landing = t.settings.get("landing", {}) if t.settings else {}
-        result.append(TenantPublicCard(
-            id=t.id,
-            name=t.name,
-            slug=t.slug,
-            type=t.type,
-            city=t.city,
-            country=t.country,
-            description=landing.get("tagline") or t.address, # Fallback to address or something
-            logo_url=t.logo_url,
-            created_at=t.created_at
-        ))
-    return result
-
-
 @router.get("/public/{slug}/", response_model=TenantPublicResponse)
 async def get_public_tenant_by_slug(
     slug: str,

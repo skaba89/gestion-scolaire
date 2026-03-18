@@ -3,66 +3,185 @@
   "realm": "schoolflow",
   "enabled": true,
   "registrationAllowed": true,
+  "registrationEmailAsUsername": true,
   "resetPasswordAllowed": true,
   "rememberMe": true,
   "verifyEmail": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "accessTokenLifespan": 900,
+  "accessTokenLifespanForImplicitFlow": 900,
+  "ssoSessionIdleTimeout": 86400,
+  "ssoSessionMaxLifespan": 604800,
   "clients": [
     {
       "clientId": "schoolflow-frontend",
+      "name": "SchoolFlow Frontend",
       "enabled": true,
       "publicClient": true,
+      "protocol": "openid-connect",
       "redirectUris": [
-        "http://localhost:3000/*"
+        "http://localhost:3000/*",
+        "http://localhost:5173/*",
+        "http://127.0.0.1:3000/*",
+        "http://127.0.0.1:5173/*"
       ],
       "webOrigins": [
-        "http://localhost:3000"
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173"
       ],
       "directAccessGrantsEnabled": true,
-      "standardFlowEnabled": true
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "frontchannelLogoutUrl": "",
+      "attributes": {
+        "access.token.lifespan": "3600",
+        "saml.assertion.signature": "false",
+        "saml.force.post.binding": "false",
+        "saml.multivalued.roles": "false",
+        "saml.encrypt": "false",
+        "saml.server.signature": "false",
+        "saml.server.signature.keyinfo.ext": "false",
+        "exclude.session.state.from.auth.response": "false",
+        "saml.artifact.binding": "false",
+        "saml_force_name_id_format": "false",
+        "tls.client.certificate.bound.access.tokens": "false",
+        "saml.authnstatement": "false",
+        "display.on.consent.screen": "false",
+        "saml.onetimeuse.condition": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "tenant-id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "user.attribute": "tenant_id",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "tenant_id",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "realm-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "roles",
+            "jsonType.label": "String"
+          }
+        }
+      ]
     },
     {
       "clientId": "schoolflow-api",
+      "name": "SchoolFlow Backend API",
       "enabled": true,
       "bearerOnly": false,
       "publicClient": false,
       "secret": "kY7f9XnQw1Zp4mBv2rT5jL8sN0aC3dE6",
+      "protocol": "openid-connect",
       "serviceAccountsEnabled": true,
-      "authorizationServicesEnabled": true
+      "authorizationServicesEnabled": true,
+      "redirectUris": [],
+      "webOrigins": [],
+      "attributes": {
+        "access.token.lifespan": "3600"
+      }
     }
   ],
   "roles": {
     "realm": [
-      { "name": "SUPER_ADMIN", "description": "Global administrator" },
-      { "name": "TENANT_ADMIN", "description": "Tenant administrator" },
+      { "name": "SUPER_ADMIN", "description": "Global platform administrator" },
+      { "name": "TENANT_ADMIN", "description": "Tenant/School administrator" },
       { "name": "DIRECTOR", "description": "School director" },
       { "name": "TEACHER", "description": "School teacher" },
       { "name": "STUDENT", "description": "Student" },
-      { "name": "PARENT", "description": "Parent" }
+      { "name": "PARENT", "description": "Parent/Guardian" },
+      { "name": "STAFF", "description": "School staff" },
+      { "name": "ACCOUNTANT", "description": "Finance/Accounting staff" },
+      { "name": "LIBRARIAN", "description": "Library staff" },
+      { "name": "ALUMNI", "description": "Former student/Alumni" }
     ]
   },
   "users": [
     {
       "username": "admin",
       "enabled": true,
+      "emailVerified": true,
       "email": "admin@schoolflow.pro",
-      "firstName": "Sovereign",
+      "firstName": "Super",
       "lastName": "Admin",
       "credentials": [
         {
           "type": "password",
-          "value": "admin",
+          "value": "admin123",
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "SUPER_ADMIN"
-      ]
+      "realmRoles": ["SUPER_ADMIN"],
+      "attributes": {
+        "tenant_id": [""]
+      }
+    },
+    {
+      "username": "demo",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "demo@schoolflow.pro",
+      "firstName": "Demo",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "demo123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["TENANT_ADMIN"],
+      "attributes": {
+        "tenant_id": [""]
+      }
     }
   ],
   "scopeMappings": [
     {
       "client": "schoolflow-frontend",
-      "roles": ["SUPER_ADMIN", "TENANT_ADMIN", "DIRECTOR", "TEACHER", "STUDENT", "PARENT"]
+      "roles": ["SUPER_ADMIN", "TENANT_ADMIN", "DIRECTOR", "TEACHER", "STUDENT", "PARENT", "STAFF", "ACCOUNTANT", "LIBRARIAN", "ALUMNI"]
+    },
+    {
+      "client": "schoolflow-api",
+      "roles": ["SUPER_ADMIN", "TENANT_ADMIN", "DIRECTOR", "TEACHER", "STUDENT", "PARENT", "STAFF", "ACCOUNTANT", "LIBRARIAN", "ALUMNI"]
     }
-  ]
+  ],
+  "browserSecurityHeaders": {
+    "contentSecurityPolicyReportOnly": "",
+    "xContentTypeOptions": "nosniff",
+    "xRobotsTag": "none",
+    "xFrameOptions": "SAMEORIGIN",
+    "contentSecurityPolicy": "frame-src 'self'; frame-ancestors 'self'; object-src 'none';",
+    "xXSSProtection": "1; mode=block",
+    "strictTransportSecurity": "max-age=31536000; includeSubDomains"
+  },
+  "smtpServer": {
+    "host": "",
+    "port": "587",
+    "ssl": "true",
+    "starttls": "true",
+    "auth": "true",
+    "from": "noreply@schoolflow.pro"
+  },
+  "internationalizationEnabled": true,
+  "supportedLocales": ["en", "fr", "ar", "es"],
+  "defaultLocale": "fr"
 }

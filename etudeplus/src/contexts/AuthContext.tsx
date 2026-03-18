@@ -39,10 +39,12 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const oidcConfig = {
-  authority: import.meta.env.VITE_KEYCLOAK_URL + "/realms/" + import.meta.env.VITE_KEYCLOAK_REALM,
-  client_id: import.meta.env.VITE_KEYCLOAK_CLIENT_ID,
-  redirect_uri: window.location.origin,
+  authority: (import.meta.env.VITE_KEYCLOAK_URL || "http://localhost:8080") + "/realms/" + (import.meta.env.VITE_KEYCLOAK_REALM || "schoolflow"),
+  client_id: import.meta.env.VITE_KEYCLOAK_CLIENT_ID || "schoolflow-frontend",
+  redirect_uri: window.location.origin + "/",
+  post_logout_redirect_uri: window.location.origin + "/",
   automaticSilentRenew: true,
+  silent_redirect_uri: window.location.origin + "/silent-renew.html",
   onSigninCallback: () => {
     window.history.replaceState({}, document.title, window.location.pathname);
   }
