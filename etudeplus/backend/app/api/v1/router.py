@@ -5,7 +5,7 @@ from app.api.v1.endpoints.finance import payments
 from app.api.v1.endpoints.operational import infrastructure, hr, school_life, parents, admissions, schedule, communication, surveys
 from app.api.v1.endpoints.operational import departments as dept_portal
 from app.api.v1.endpoints.operational import alumni as alumni_portal
-from app.api.v1.endpoints.operational import inventory, library, clubs, incidents, elearning
+from app.api.v1.endpoints.operational import inventory, library, clubs, incidents, elearning, support
 
 api_router = APIRouter()
 
@@ -56,6 +56,7 @@ api_router.include_router(clubs.router, prefix="/clubs", tags=["Clubs"])
 api_router.include_router(incidents.router, prefix="/incidents", tags=["Incidents"])
 api_router.include_router(surveys.router, prefix="/surveys", tags=["Surveys"])
 api_router.include_router(elearning.router, prefix="/elearning", tags=["E-Learning"])
+api_router.include_router(support.router, prefix="/support", tags=["Support & Maintenance"])
 
 # Monitoring & Backup routes
 api_router.include_router(monitoring.router, prefix="/monitoring", tags=["Monitoring"])
