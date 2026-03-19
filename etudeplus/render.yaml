@@ -1,0 +1,142 @@
+# ==============================================================================
+# EtudePlus - Render Blueprint (Dynamic Deployment)
+# A single web service serving both backend API and React frontend
+# ==============================================================================
+
+services:
+  # ─── Main Web Service (Backend + Frontend) ───────────────────────────────────
+  - type: web
+    name: etudeplus
+    env: docker
+    region: frankfurt  # or oregon for US
+    plan: free  # Free tier: 512MB RAM, 0.1 CPU, spins down after inactivity
+    dockerfilePath: ./Dockerfile.render
+    dockerContext: .
+    
+    # Build-time environment variables
+    buildEnv:
+      VITE_API_URL: ""  # Will use relative API path (same origin)
+      VITE_KEYCLOAK_URL: ${KEYCLOAK_URL}
+      VITE_KEYCLOAK_REALM: schoolflow
+      VITE_KEYCLOAK_CLIENT_ID: schoolflow-frontend
+    
+    # Runtime environment variables
+    envVars:
+      # Database connection
+      - key: DATABASE_URL
+        fromDatabase:
+          name: etudeplus-db
+          property: connectionString
+      
+      # Redis connection
+      - key: REDIS_URL
+        fromService:
+          name: etudeplus-redis
+          type: redis
+          property: connectionString
+      
+      # Security
+      - key: SECRET_KEY
+        generateValue: true  # Auto-generate a secure secret
+      
+      # Application settings
+      - key: DEBUG
+        value: "False"
+      
+      - key: LOG_LEVEL
+        value: "INFO"
+      
+      - key: SERVE_FRONTEND
+        value: "true"
+      
+      # CORS - allow same origin
+      - key: BACKEND_CORS_ORIGINS
+        value: ""
+      
+      # Keycloak configuration (set manually in dashboard)
+      - key: KEYCLOAK_URL
+        sync: false
+      
+      - key: KEYCLOAK_REALM
+        value: "schoolflow"
+      
+      - key: KEYCLOAK_CLIENT_ID
+        value: "schoolflow-backend"
+      
+      - key: KEYCLOAK_CLIENT_SECRET
+        sync: false  # Set manually in Render dashboard
+      
+      - key: KEYCLOAK_AUDIENCE
+        value: "schoolflow-frontend"
+      
+      # MinIO/S3 Storage (optional - can use Render Object Storage)
+      - key: MINIO_ENDPOINT
+        sync: false
+      
+      - key: MINIO_ACCESS_KEY
+        sync: false
+      
+      - key: MINIO_SECRET_KEY
+        sync: false
+      
+      - key: MINIO_BUCKET
+        value: "schoolflow"
+      
+      - key: MINIO_SECURE
+        value: "true"
+    
+    # Health check for container orchestration
+    healthCheckPath: /health/
+    
+    # Number of instances (free tier only allows 1)
+    numInstances: 1
+    
+    # Auto-deploy on push to main branch
+    autoDeploy: true
+    
+    # Branch to deploy
+    branch: main
+
+  # ─── Redis Cache ─────────────────────────────────────────────────────────────
+  - type: redis
+    name: etudeplus-redis
+    region: frankfurt
+    plan: free  # Free tier: 25MB limit
+    maxmemoryPolicy: allkeys-lru  # Evict any key when memory is full
+
+# ─── PostgreSQL Database ───────────────────────────────────────────────────────
+databases:
+  - name: etudeplus-db
+    databaseName: schoolflow
+    region: frankfurt
+    plan: free  # Free tier: 1GB storage, expires after 90 days
+    user: schoolflow_user
+    postgresMajorVersion: 15
+
+# ==============================================================================
+# IMPORTANT NOTES FOR FREE TIER:
+# ==============================================================================
+# 
+# 1. Web Service Limitations (Free):
+#    - 512MB RAM, 0.1 CPU
+#    - Spins down after 15 minutes of inactivity
+#    - 750 hours/month (enough for 1 service running 24/7)
+#    - Cold starts can take 30-60 seconds
+#
+# 2. Database Limitations (Free):
+#    - 1GB storage
+#    - Expires after 90 days (you'll need to migrate)
+#    - No automatic backups
+#    - Connection limit: 97 connections
+#
+# 3. Redis Limitations (Free):
+#    - 25MB memory
+#    - No persistence
+#    - Connection limit: 30 connections
+#
+# 4. What You Need to Configure Manually:
+#    - Keycloak (use a managed service like Auth0, or self-host on another platform)
+#    - S3-compatible storage (Render Object Storage, or AWS S3 free tier)
+#    - The KEYCLOAK_URL and KEYCLOAK_CLIENT_SECRET in Render dashboard
+#
+# ==============================================================================
