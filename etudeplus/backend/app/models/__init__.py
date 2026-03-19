@@ -44,3 +44,9 @@ from app.models.elearning import (
     Course, CourseEnrollment, Lesson, LessonResource, LessonProgress,
     HomeworkAssignment, HomeworkSubmission, CourseDiscussion, DiscussionReply
 )
+
+# Support & Maintenance models (GropAgent)
+from app.models.support_ticket import (
+    SupportTicket, TicketComment, TicketHistory, SupportCategory, SupportKnowledgeBase,
+    TicketStatus, TicketPriority, TicketCategory
+)
